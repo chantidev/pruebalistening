@@ -37,7 +37,7 @@ window.onYouTubeIframeAPIReady = function () {
   ytPlayer = new YT.Player('ytPlayer', {
     width: '100%',
     height: '100%',
-    playerVars: { rel: 0, modestbranding: 1 },
+    playerVars: { rel: 0, modestbranding: 1, origin: window.location.origin },
     events: {
       onReady: () => { ytPlayerReady = true; },
     },
@@ -99,7 +99,7 @@ function renderLangPicker(data) {
   videoDurationEl.textContent = formatDuration(data.duration);
 
   if (!data.languages.length) {
-    warningEl.textContent = 'Este video no tiene subtítulos disponibles';
+    warningEl.textContent = data.warning || 'Este video no tiene subtítulos disponibles';
     warningEl.classList.remove('hidden');
   } else {
     warningEl.classList.add('hidden');

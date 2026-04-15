@@ -92,9 +92,18 @@ app.get('/api/languages', async (req, res) => {
     const yt = await getInnertube();
     const info = await yt.getInfo(videoId);
 
-    const title = info.basic_info?.title || 'Sin título';
-    const author = info.basic_info?.author || 'Desconocido';
+    let title = info.basic_info?.title || '';
+    let author = info.basic_info?.author || '';
     const duration = info.basic_info?.duration || 0;
+
+    // Fallback: oEmbed for title/author when InnerTube returns empty (cloud IP blocking)
+    if (!title || !author) {
+      try {
+        const oembed = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+        title = title || oembed.title || 'Sin título';
+        author = author || oembed.author_name || 'Desconocido';
+      } catch { /* ignore */ }
+    }
 
     let transcriptInfo;
     try {
@@ -154,7 +163,12 @@ app.get('/api/languages', async (req, res) => {
     });
 
     if (languages.length === 0) {
-      return res.json({ videoId, title, author, duration, languages: [], warning: 'Este video no tiene subtítulos disponibles' });
+      // If caption_tracks is also empty, YouTube likely blocked this server's IP
+      const blockedByYT = captionTracks.length === 0 && !transcriptInfo;
+      const warning = blockedByYT
+        ? 'youtubei.js no puede acceder a YouTube desde este servidor (IP de servidor cloud bloqueada). Usa el método Supadata.'
+        : 'Este video no tiene subtítulos disponibles';
+      return res.json({ videoId, title, author, duration, languages: [], warning });
     }
 
     res.json({ videoId, title, author, duration, languages });
